@@ -1,4 +1,4 @@
-# searxng-docker
+# Open WebUI + SearXNG
 
 Create a new SearXNG instance in five minutes using Docker
 
