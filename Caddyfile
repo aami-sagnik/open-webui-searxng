@@ -2,21 +2,7 @@
 	admin off
 
 	log {
-		output stderr
-		format filter {
-			# Preserves first 8 bits from IPv4 and 32 bits from IPv6
-			request>remote_ip ip_mask 8 32
-			request>client_ip ip_mask 8 32
-
-			# Remove identificable information
-			request>remote_port delete
-			request>headers delete
-			request>uri query {
-				delete url
-				delete h
-				delete q
-			}
-		}
+		output discard
 	}
 
 	servers {
