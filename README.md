@@ -78,6 +78,7 @@ docker exec -it ollama ollama pull llama3.2
 4. Set **SearXNG Query URL** to:
 ```text
 http://searxng:8080/search?q=<query>
+```
 
 ---
 # Connecting Open WebUI (Docker) to Host Ollama
