@@ -20,7 +20,7 @@ A fully self-hosted, private AI stack featuring Ollama for LLM inference, Open W
 * [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) configured on the host.
 
 ---
-
+*Note: If you are using ollama installed on you host machine, replace `docker-compose.yaml` with `docker-compose-host-ollama.yaml`*
 ## Directory Setup
 
 Ensure the host directories and configuration files exist before launching:
