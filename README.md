@@ -1,122 +1,85 @@
-# Open WebUI + SearXNG
+# Open-WebUI + SearXNG
 
-Create a new SearXNG instance in five minutes using Docker
+A fully self-hosted, private AI stack featuring Ollama for LLM inference, Open WebUI for the chat interface, and SearXNG for private web search with RAG.
 
-## What is included?
+---
 
-| Name                                          | Description                                                    | Docker image                                                                 | Dockerfile                                                                                                                                                                                    |
-|-----------------------------------------------|----------------------------------------------------------------|------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [Caddy](https://github.com/caddyserver/caddy) | Reverse proxy (create a LetsEncrypt certificate automatically) | [docker.io/library/caddy:2-alpine](https://hub.docker.com/_/caddy)           | [Dockerfile](https://github.com/caddyserver/caddy-docker/blob/master/Dockerfile.tmpl)                                                                                                         |
-| [SearXNG](https://github.com/searxng/searxng) | SearXNG by itself                                              | [docker.io/searxng/searxng:latest](https://hub.docker.com/r/searxng/searxng) | [builder.dockerfile](https://github.com/searxng/searxng/blob/master/container/builder.dockerfile) [dist.dockerfile](https://github.com/searxng/searxng/blob/master/container/dist.dockerfile) |
-| [Valkey](https://github.com/valkey-io/valkey) | In-memory database                                             | [docker.io/valkey/valkey:8-alpine](https://hub.docker.com/r/valkey/valkey)   | [Dockerfile](https://github.com/valkey-io/valkey-container/blob/mainline/Dockerfile.template)                                                                                                 |
+## Architecture Overview
 
-## How to use it
+* **Ollama**: Local LLM backend running models directly with NVIDIA GPU acceleration.
+* **Open WebUI (CUDA)**: Feature-rich chat interface connected to Ollama, configured for GPU acceleration.
+* **SearXNG**: Privacy-respecting metasearch engine used to provide real-time web search capabilities to your LLM.
+* **Valkey (Redis)**: High-performance caching layer for SearXNG query results and rate limiting.
+* **Caddy**: Reverse proxy managing local SSL certificates and host-level routing for the search instance.
 
-There are two ways to host SearXNG. The first one doesn't require any prior knowledge about self-hosting and thus is
-recommended for beginners. It includes caddy as a reverse proxy and automatically deals with the TLS certificates for
-you. The second one is recommended for more advanced users that already have their own reverse proxy (e.g. Nginx,
-HAProxy, ...) and probably some other services running on their machine. The first few steps are the same for both
-installation methods however.
+---
 
-1. [Install docker](https://docs.docker.com/install/)
-2. Get searxng-docker
+## Prerequisites
 
-```shell
-cd /usr/local
-git clone https://github.com/searxng/searxng-docker.git
-cd searxng-docker
+* Docker and Docker Compose installed.
+* [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) configured on the host.
+
+---
+
+## Directory Setup
+
+Ensure the host directories and configuration files exist before launching:
+
+```bash
+mkdir -p ollama searxng
+
 ```
 
-3. Edit the [.env](https://github.com/searxng/searxng-docker/blob/master/.env) file to set the hostname and an email
-4. Generate the secret key `sed -i "s|ultrasecretkey|$(openssl rand -hex 32)|g" searxng/settings.yml`  
-   On a Mac: `sed -i '' "s|ultrasecretkey|$(openssl rand -hex 32)|g" searxng/settings.yml`
-5. Edit [searxng/settings.yml](https://github.com/searxng/searxng-docker/blob/master/searxng/settings.yml) according to
-   your needs
+### 1. SearXNG Configuration (`./searxng/settings.yml`)
 
-> [!NOTE]
-> Windows users can use the following powershell script to generate the secret key:
-> ```powershell
-> $randomBytes = New-Object byte[] 32
-> (New-Object Security.Cryptography.RNGCryptoServiceProvider).GetBytes($randomBytes)
-> $secretKey = -join ($randomBytes | ForEach-Object { "{0:x2}" -f $_ })
-> (Get-Content searxng/settings.yml) -replace 'ultrasecretkey', $secretKey | Set-Content searxng/settings.yml
-> ```
+SearXNG requires JSON format support enabled so Open WebUI can parse search results. Ensure your `./searxng/settings.yml` contains at minimum:
 
-### Method 1: With Caddy included (recommended for beginners)
+```yaml
+use_default_settings: true
+search:
+  formats:
+    - html
+    - json
 
-6. Run SearXNG in the background: `docker compose up -d`
+```
 
-### Method 2: Bring your own reverse proxy (experienced users)
+### 2. Caddyfile (`./Caddyfile`)
 
-6. Remove the caddy related parts in `docker-compose.yaml` such as the caddy service and its volumes.
-7. Point your reverse proxy to the port set for the `searxng` service in `docker-compose.yml` (8080 by default).
-8. Generate and configure the required TLS certificates with the reverse proxy of your choice.
-9. Run SearXNG in the background: `docker compose up -d`
+Place your Caddy configuration in `./Caddyfile` to handle traffic proxying and HTTPS termination according to your `SEARXNG_HOSTNAME`.
 
-> [!NOTE]
-> You can change the port `searxng` listens on inside the docker container (e.g. if you want to operate in `host`
-> network mode) with the `BIND_ADDRESS` environment variable (defaults to `[::]:8080`). The environment variable can be
-> set directly inside `docker-compose.yaml`.
+---
 
-## Troubleshooting - How to access the logs
+## Getting Started
 
-To access the logs from all the containers use: `docker compose logs -f`.
-
-To access the logs of one specific container:
-
-- Caddy: `docker compose logs -f caddy`
-- SearXNG: `docker compose logs -f searxng`
-- Valkey: `docker compose logs -f redis`
-
-### Start SearXNG with systemd
-
-You can skip this step if you don't use systemd.
-
-1. Copy the service template file:
-   ```sh
-   cp searxng-docker.service.template searxng-docker.service
-   ```
-
-2. Edit the content of ```WorkingDirectory``` in the ```searxng-docker.service``` file (only if the installation path is
-   different from ```/usr/local/searxng-docker```)
-
-3. Enable the service:
-   ```sh
-   systemctl enable $(pwd)/searxng-docker.service
-   ```
-
-4. Start the service:
-   ```sh
-   systemctl start searxng-docker.service
-   ```
-
-**Note:** Ensure the service file path matches your installation directory before enabling it.
-
-## Linking SearXNG with Open WebUI
-Go to the **Admin Panel**. Under **Web Search** enable **Web Search** and select `searxng` as the **Web Search Engine** and set ```http://searxng:8080/search?q=<query>``` as the **Searxng Query URL**.
-
-## Multi Architecture Docker images
-
-Supported architecture:
-
-- amd64
-- arm64
-- arm/v7
-
-## How to update ?
-
-To update the SearXNG stack:
-
-```sh
-git pull
-docker compose pull
+1. **Start the stack**:
+```bash
 docker compose up -d
+
 ```
 
-Or the old way (with the old docker-compose version):
 
-```sh
-git pull
-docker-compose pull
-docker-compose up -d
+2. **Access Open WebUI**:
+Open `http://localhost:3060` in your browser. The first account registered automatically becomes the administrator.
+3. **Pull a model via CLI** (or directly in Open WebUI under **Settings > Models**):
+```bash
+docker exec -it ollama ollama pull llama3.2
+
 ```
+
+
+
+---
+
+## Connecting Web Search in Open WebUI
+
+1. Go to **Admin Panel > Settings > Web Search**.
+2. Toggle **Enable Web Search** to **On**.
+3. Set **Web Search Engine** to `searxng`.
+4. Set **SearXNG Query URL** to:
+```text
+http://searxng:8080/search?q=<query>
+
+```
+
+
+5. Click **Save**. Web search can now be toggled on per-prompt inside chats.
