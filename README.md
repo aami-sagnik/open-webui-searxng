@@ -168,10 +168,7 @@ docker exec -it open-webui curl -s http://host.docker.internal:11434/api/tags
 
 ```
 
-
 *Expected output:* A JSON object listing your host-installed models.
-
-```
 
 
 5. Click **Save**. Web search can now be toggled on per-prompt inside chats.
