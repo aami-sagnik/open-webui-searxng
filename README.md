@@ -79,6 +79,103 @@ docker exec -it ollama ollama pull llama3.2
 ```text
 http://searxng:8080/search?q=<query>
 
+---
+# Connecting Open WebUI (Docker) to Host Ollama
+
+By default, host Ollama binds only to `127.0.0.1`. You must configure it to listen on `0.0.0.0` and configure Docker to reach the host gateway.
+
+---
+
+## 1. Configure Host Ollama (`OLLAMA_HOST=0.0.0.0`)
+
+### Linux (systemd)
+
+1. Edit the service override:
+```bash
+sudo systemctl edit ollama.service
+
+```
+
+
+2. Paste:
+```ini
+[Service]
+Environment="OLLAMA_HOST=0.0.0.0"
+
+```
+
+
+3. Save, reload, and restart:
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart ollama
+
+```
+
+
+
+### Windows
+
+1. Close Ollama completely from the system tray (taskbar notification area).
+2. Open **PowerShell** as Administrator and run:
+```powershell
+[System.Environment]::SetEnvironmentVariable('OLLAMA_HOST', '0.0.0.0', 'User')
+
+```
+
+
+*(Or set it manually via: **System Properties > Advanced > Environment Variables > User variables > New**).*
+3. Relaunch Ollama from the Start Menu.
+
+---
+
+## 2. Update `docker-compose.yml`
+
+Remove the `ollama` service container and update `open-webui` to target `host.docker.internal`:
+
+```yaml
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:cuda
+    container_name: open-webui
+    networks:
+      - ollama
+    ports:
+      - "3060:8080"
+    volumes:
+      - open-webui:/app/backend/data
+    environment:
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    devices:
+      - nvidia.com/gpu=all
+    security_opt:
+      - label=disable
+    privileged: true
+    restart: unless-stopped
+
+```
+
+---
+
+## 3. Apply & Verify
+
+1. Restart the container:
+```bash
+docker compose up -d open-webui
+
+```
+
+
+2. Verify connectivity:
+```bash
+docker exec -it open-webui curl -s http://host.docker.internal:11434/api/tags
+
+```
+
+
+*Expected output:* A JSON object listing your host-installed models.
+
 ```
 
 
