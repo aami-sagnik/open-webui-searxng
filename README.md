@@ -84,8 +84,6 @@ http://searxng:8080/search?q=<query>
 
 By default, host Ollama binds only to `127.0.0.1`. You must configure it to listen on `0.0.0.0` and configure Docker to reach the host gateway.
 
----
-
 ## 1. Configure Host Ollama (`OLLAMA_HOST=0.0.0.0`)
 
 ### Linux (systemd)
@@ -127,9 +125,7 @@ sudo systemctl restart ollama
 *(Or set it manually via: **System Properties > Advanced > Environment Variables > User variables > New**).*
 3. Relaunch Ollama from the Start Menu.
 
----
-
-## 2. Update `docker-compose.yml`
+### Update `docker-compose.yml`
 
 Remove the `ollama` service container and update `open-webui` to target `host.docker.internal`:
 
@@ -156,9 +152,7 @@ Remove the `ollama` service container and update `open-webui` to target `host.do
 
 ```
 
----
-
-## 3. Apply & Verify
+### 3. Apply & Verify
 
 1. Restart the container:
 ```bash
